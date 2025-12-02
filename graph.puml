@@ -1,0 +1,54 @@
+@startuml
+package "SQL Database" {
+    class UsersTable {
+        + UserId : int
+        + Username : string
+        + PasswordHash : string
+        + Role : string
+    }
+    
+    class TicketsTable {
+        + StatusId : int
+        + StatusName : string
+    }
+
+    class TicketsStatusesTable {
+        + TicketId : int
+        + Title : string
+        + Description : string
+        + DateCreated : date
+        + CreatorUserId : int 
+        + StatusId : int
+    }
+UsersTable <-- TicketsStatusesTable : references <
+UsersTable -->TicketsStatusesTable : references >
+TicketsStatusesTable --> TicketsTable : references >
+TicketsStatusesTable <-- TicketsTable : references <
+}
+package "Ticketing System/C# Backend" {
+    
+class User {
+    + Id : int
+    + Username : string
+    + Role : string
+}
+class Ticket{
+    + Id : int
+    + Title : string
+    + Description : string
+    + DateCreated : date
+    + StatusId : int
+    + CreatorUserId : int
+}
+class TicketStatus{
+    + Id : int
+    + StatusName : string
+}
+User --> Ticket : creates >
+TicketStatus <-- Ticket : has <
+}
+
+
+"SQL Database" --> "Ticketing System/C# Backend" : interacts >
+"SQL Database" <-- "Ticketing System/C# Backend" : interacts <
+@enduml
