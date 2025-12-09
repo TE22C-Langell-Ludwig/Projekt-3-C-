@@ -7,12 +7,12 @@ package "SQL Database" {
         + Role : string
     }
     
-    class TicketsTable {
+    class TicketsStatusesTable {
         + StatusId : int
         + StatusName : string
     }
 
-    class TicketsStatusesTable {
+    class TicketsTable {
         + TicketId : int
         + Title : string
         + Description : string
