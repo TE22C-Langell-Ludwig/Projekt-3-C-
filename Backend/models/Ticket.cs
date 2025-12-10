@@ -1,19 +1,21 @@
 using System;
+
 namespace Backend.models
 {
-	public class Ticket
-	{
-		public int Id { get; set; }
-		public string Title { get; set; }
-		public string Description { get; set; }
-		public DateTime DateCreated { get; set; }
+    public class Ticket
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime DateCreated { get; set; }
 
-		// Foreign Key → User
-		public int CreatorUserId { get; set; }
-		public User CreatorUser { get; set; } = new User;
+        // Foreign Key → User
+        public int CreatorUserId { get; set; }
+        public User? CreatorUser { get; set; }
 
-		// Foreign Key → TicketStatus
-		public int StatusId { get; set; }
-		public TicketStatus Status { get; set; }
-	}
+        // Foreign Key → TicketStatus
+        public int StatusId { get; set; }
+        public TicketStatus? Status { get; set; }
+    }
 }
+

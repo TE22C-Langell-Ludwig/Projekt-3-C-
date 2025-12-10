@@ -1,12 +1,12 @@
 using System.Collections.Generic;
+
 namespace Backend.models
 {
-	public class TicketStatus
-	{
-		public int Id { get; set; }
-		public string StatusName { get; set; }
+    public class TicketStatus
+    {
+        public int Id { get; set; }
+        public string StatusName { get; set; } = string.Empty;
 
-		// Navigation — all tickets with this status
-		public ICollection<Ticket> Tickets { get; set; }
-	}
+        public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+    }
 }
