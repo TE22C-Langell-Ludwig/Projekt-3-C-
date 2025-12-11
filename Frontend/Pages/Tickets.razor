@@ -1,35 +1,87 @@
 ﻿@page "/tickets"
 @inject HttpClient Http
 
-<PageTitle>Weather</PageTitle>
+<PageTitle>Tickets</PageTitle>
 
-<h1>Weather</h1>
+<h1>Tickets</h1>
 
-<p>This component demonstrates fetching data from the server.</p>
+<p>View and manage all support tickets.</p>
 
-@if (forecasts == null)
+<!-- Create New Ticket Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Create New Ticket</h4>
+    </div>
+    <div class="card-body">
+        <form @onsubmit="CreateTicket">
+            <div class="mb-3">
+                <label for="title" class="form-label">Title:</label>
+                <input type="text" class="form-control" id="title" @bind="newTicket.Title" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Description:</label>
+                <textarea class="form-control" id="description" rows="4" @bind="newTicket.Description" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="creatorUserId" class="form-label">Creator User ID:</label>
+                <input type="number" class="form-control" id="creatorUserId" @bind="newTicket.CreatorUserId" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="statusId" class="form-label">Status ID:</label>
+                <input type="number" class="form-control" id="statusId" @bind="newTicket.StatusId" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create Ticket</button>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">
+                    @errorMessage
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="alert">
+                    @successMessage
+                </div>
+            }
+        </form>
+    </div>
+</div>
+
+@if (tickets == null)
 {
-    <p><em>Loading...</em></p>
+    <p><em>Loading tickets...</em></p>
+}
+else if (tickets.Count == 0)
+{
+    <p><em>No tickets found.</em></p>
 }
 else
 {
     <table class="table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Created By</th>
+                <th>Status</th>
+                <th>Date Created</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var forecast in forecasts )
+            @foreach (var ticket in tickets)
             {
                 <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
+                    <td>@ticket.Id</td>
+                    <td>@ticket.Title</td>
+                    <td>@ticket.Description</td>
+                    <td>@ticket.CreatorUser?.Username</td>
+                    <td>@ticket.Status?.StatusName</td>
+                    <td>@ticket.DateCreated.ToShortDateString()</td>
                 </tr>
             }
         </tbody>
@@ -37,21 +89,87 @@ else
 }
 
 @code {
-    private WeatherForecast[]? forecasts;
+    private List<Ticket>? tickets;
+    private Ticket newTicket = new();
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
+        await LoadTickets();
     }
 
-    public class WeatherForecast
+    private async Task LoadTickets()
     {
-        public DateOnly Date { get; set; }
+        try
+        {
+            tickets = await Http.GetFromJsonAsync<List<Ticket>>("api/tickets") ?? new List<Ticket>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading tickets: {ex.Message}");
+            tickets = new List<Ticket>();
+            errorMessage = "Failed to load tickets.";
+        }
+    }
 
-        public int TemperatureC { get; set; }
+    private async Task CreateTicket()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
 
-        public string? Summary { get; set; }
+        try
+        {
+            // Set the creation date to now
+            newTicket.DateCreated = DateTime.Now;
 
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+            // POST the new ticket to the backend
+            var response = await Http.PostAsJsonAsync("api/tickets", newTicket);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Ticket created successfully!";
+                newTicket = new(); // Reset the form
+                await LoadTickets(); // Refresh the ticket list
+            }
+            else
+            {
+                errorMessage = $"Failed to create ticket. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating ticket: {ex.Message}");
+            errorMessage = $"Error creating ticket: {ex.Message}";
+        }
+    }
+
+    public class Ticket
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime DateCreated { get; set; }
+
+        // Foreign Key → User
+        public int CreatorUserId { get; set; }
+        public User? CreatorUser { get; set; }
+
+        // Foreign Key → TicketStatus
+        public int StatusId { get; set; }
+        public TicketStatus? Status { get; set; }
+    }
+
+    public class User
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class TicketStatus
+    {
+        public int Id { get; set; }
+        public string StatusName { get; set; } = string.Empty;
     }
 }

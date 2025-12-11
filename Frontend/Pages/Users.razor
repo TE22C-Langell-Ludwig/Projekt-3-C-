@@ -1,18 +1,144 @@
 ﻿@page "/users"
+@inject HttpClient Http
 
 <PageTitle>Users</PageTitle>
 
 <h1>Users</h1>
 
-<p role="status">Current Users: @currentCount</p>
+<p>View and manage all users.</p>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<!-- Create New User Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Create New User</h4>
+    </div>
+    <div class="card-body">
+        <form @onsubmit="CreateUser">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username:</label>
+                <input type="text" class="form-control" id="username" @bind="newUser.Username" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="role" class="form-label">Role:</label>
+                <input type="text" class="form-control" id="role" @bind="newUser.Role" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create User</button>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">
+                    @errorMessage
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="alert">
+                    @successMessage
+                </div>
+            }
+        </form>
+    </div>
+</div>
+
+@if (users == null)
+{
+    <p><em>Loading users...</em></p>
+}
+else if (users.Count == 0)
+{
+    <p><em>No users found.</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Tickets Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Id</td>
+                    <td>@user.Username</td>
+                    <td>@user.Role</td>
+                    <td>@user.TicketsCreated?.Count ?? 0</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
 @code {
+    private List<User>? users;
+    private User newUser = new();
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
 
-    private int currentCount = 0;
-
-    private void IncrementCount()
+    protected override async Task OnInitializedAsync()
     {
-        currentCount++;
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<User>>("api/users") ?? new List<User>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading users: {ex.Message}");
+            users = new List<User>();
+            errorMessage = "Failed to load users.";
+        }
+    }
+
+    private async Task CreateUser()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            // POST the new user to the backend
+            var response = await Http.PostAsJsonAsync("api/users", newUser);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "User created successfully!";
+                newUser = new(); // Reset the form
+                await LoadUsers(); // Refresh the user list
+            }
+            else
+            {
+                errorMessage = $"Failed to create user. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating user: {ex.Message}");
+            errorMessage = $"Error creating user: {ex.Message}";
+        }
+    }
+
+    public class User
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+
+        public ICollection<Ticket>? TicketsCreated { get; set; } = new List<Ticket>();
+    }
+
+    public class Ticket
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
     }
 }
