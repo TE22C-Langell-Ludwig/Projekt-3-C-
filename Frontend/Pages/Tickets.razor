@@ -7,7 +7,6 @@
 
 <p>View and manage all support tickets.</p>
 
-<!-- Create New Ticket Section -->
 <div class="card mb-4">
     <div class="card-header">
         <h4>Create New Ticket</h4>
@@ -25,13 +24,36 @@
             </div>
 
             <div class="mb-3">
-                <label for="creatorUserId" class="form-label">Creator User ID:</label>
-                <input type="number" class="form-control" id="creatorUserId" @bind="newTicket.CreatorUserId" required />
+                <label for="creatorUserId" class="form-label">Creator User:</label>
+                @if (users == null)
+                {
+                    <p><em>Loading users...</em></p>
+                }
+                else if (users.Count == 0)
+                {
+                    <p><em>No users available. Please create a user first.</em></p>
+                }
+                else
+                {
+                    <select class="form-control" id="creatorUserId" @bind="newTicket.CreatorUserId" required>
+                        <option value="0">-- Select a user --</option>
+                        @foreach (var user in users)
+                        {
+                            <option value="@user.Id">@user.Username</option>
+                        }
+                    </select>
+                }
             </div>
 
             <div class="mb-3">
-                <label for="statusId" class="form-label">Status ID:</label>
-                <input type="number" class="form-control" id="statusId" @bind="newTicket.StatusId" required />
+                <label for="statusId" class="form-label">Status:</label>
+                <select class="form-control" id="statusId" @bind="newTicket.StatusId" required>
+                    <option value="0">-- Select a status --</option>
+                    @foreach (var status in statuses)
+                    {
+                        <option value="@status.Key">@status.Value</option>
+                    }
+                </select>
             </div>
 
             <button type="submit" class="btn btn-primary">Create Ticket</button>
@@ -90,13 +112,23 @@ else
 
 @code {
     private List<Ticket>? tickets;
+    private List<User>? users;
+    private Dictionary<int, string> statuses = new();
     private Ticket newTicket = new();
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        statuses = new Dictionary<int, string>
+        {
+            { 1, "Working On" },
+            { 2, "Ready To Be Picked Up" },
+            { 3, "Finished" }
+        };
+
         await LoadTickets();
+        await LoadUsers();
     }
 
     private async Task LoadTickets()
@@ -113,6 +145,19 @@ else
         }
     }
 
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<User>>("api/users") ?? new List<User>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading users: {ex.Message}");
+            users = new List<User>();
+        }
+    }
+
     private async Task CreateTicket()
     {
         errorMessage = string.Empty;
@@ -120,21 +165,20 @@ else
 
         try
         {
-            // Set the creation date to now
             newTicket.DateCreated = DateTime.Now;
 
-            // POST the new ticket to the backend
             var response = await Http.PostAsJsonAsync("api/tickets", newTicket);
 
             if (response.IsSuccessStatusCode)
             {
                 successMessage = "Ticket created successfully!";
-                newTicket = new(); // Reset the form
-                await LoadTickets(); // Refresh the ticket list
+                newTicket = new();
+                await LoadTickets();
             }
             else
             {
-                errorMessage = $"Failed to create ticket. Status: {response.StatusCode}";
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Failed to create ticket. Status: {response.StatusCode} - {content}";
             }
         }
         catch (Exception ex)
@@ -151,11 +195,9 @@ else
         public string Description { get; set; } = string.Empty;
         public DateTime DateCreated { get; set; }
 
-        // Foreign Key → User
         public int CreatorUserId { get; set; }
         public User? CreatorUser { get; set; }
 
-        // Foreign Key → TicketStatus
         public int StatusId { get; set; }
         public TicketStatus? Status { get; set; }
     }
