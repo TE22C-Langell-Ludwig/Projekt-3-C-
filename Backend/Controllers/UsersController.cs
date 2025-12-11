@@ -21,9 +21,7 @@ namespace Backend.Controllers
         {
             try
             {
-                var users = await _context.Users
-                    .Include(u => u.TicketsCreated)
-                    .ToListAsync();
+                var users = await _context.Users.ToListAsync();
                 return Ok(users);
             }
             catch (Exception ex)
@@ -37,9 +35,7 @@ namespace Backend.Controllers
         {
             try
             {
-                var user = await _context.Users
-                    .Include(u => u.TicketsCreated)
-                    .FirstOrDefaultAsync(u => u.Id == id);
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
 
                 if (user == null)
                     return NotFound(new { message = "User not found" });

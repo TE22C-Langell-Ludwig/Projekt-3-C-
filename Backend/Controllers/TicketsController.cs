@@ -17,13 +17,24 @@ namespace Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ticket>>> GetTickets()
+        public async Task<ActionResult<IEnumerable<object>>> GetTickets()
         {
             try
             {
                 var tickets = await _context.Tickets
                     .Include(t => t.CreatorUser)
                     .Include(t => t.Status)
+                    .Select(t => new
+                    {
+                        t.Id,
+                        t.Title,
+                        t.Description,
+                        t.DateCreated,
+                        t.CreatorUserId,
+                        CreatorUser = new { t.CreatorUser.Id, t.CreatorUser.Username, t.CreatorUser.Role },
+                        t.StatusId,
+                        Status = new { t.Status.Id, t.Status.StatusName }
+                    })
                     .ToListAsync();
                 return Ok(tickets);
             }
@@ -34,14 +45,26 @@ namespace Backend.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ticket>> GetTicket(int id)
+        public async Task<ActionResult<object>> GetTicket(int id)
         {
             try
             {
                 var ticket = await _context.Tickets
                     .Include(t => t.CreatorUser)
                     .Include(t => t.Status)
-                    .FirstOrDefaultAsync(t => t.Id == id);
+                    .Where(t => t.Id == id)
+                    .Select(t => new
+                    {
+                        t.Id,
+                        t.Title,
+                        t.Description,
+                        t.DateCreated,
+                        t.CreatorUserId,
+                        CreatorUser = new { t.CreatorUser.Id, t.CreatorUser.Username, t.CreatorUser.Role },
+                        t.StatusId,
+                        Status = new { t.Status.Id, t.Status.StatusName }
+                    })
+                    .FirstOrDefaultAsync();
 
                 if (ticket == null)
                     return NotFound(new { message = "Ticket not found" });
