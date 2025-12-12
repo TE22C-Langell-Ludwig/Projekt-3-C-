@@ -1,5 +1,6 @@
 ﻿@page "/tickets"
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Tickets</PageTitle>
 
@@ -92,6 +93,7 @@ else
                 <th>Created By</th>
                 <th>Status</th>
                 <th>Date Created</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -102,8 +104,19 @@ else
                     <td>@ticket.Title</td>
                     <td>@ticket.Description</td>
                     <td>@ticket.CreatorUser?.Username</td>
-                    <td>@ticket.Status?.StatusName</td>
+                    <td>
+                        <select class="form-select form-select-sm" @onchange="async (ChangeEventArgs e) => await UpdateTicketStatus(ticket.Id, int.Parse((string)e.Value!))">
+                            <option value="0">-- Select --</option>
+                            @foreach (var status in statuses)
+                            {
+                                <option value="@status.Key" selected="@(ticket.StatusId == status.Key)">@status.Value</option>
+                            }
+                        </select>
+                    </td>
                     <td>@ticket.DateCreated.ToShortDateString()</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="async () => await DeleteTicket(ticket.Id)">Delete</button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -186,6 +199,65 @@ else
             Console.WriteLine($"Error creating ticket: {ex.Message}");
             errorMessage = $"Error creating ticket: {ex.Message}";
         }
+    }
+
+    private async Task UpdateTicketStatus(int ticketId, int newStatusId)
+    {
+        if (newStatusId <= 0 || tickets == null)
+            return;
+
+        try
+        {
+            var ticket = tickets.FirstOrDefault(t => t.Id == ticketId);
+            if (ticket == null)
+                return;
+
+            ticket.StatusId = newStatusId;
+
+            var response = await Http.PutAsJsonAsync($"api/tickets/{ticketId}", ticket);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = "Failed to update ticket status";
+                await LoadTickets();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating ticket status: {ex.Message}");
+            errorMessage = $"Error updating ticket status: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteTicket(int ticketId)
+    {
+        if (!await ConfirmDelete())
+            return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/tickets/{ticketId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Ticket deleted successfully!";
+                await LoadTickets();
+            }
+            else
+            {
+                errorMessage = "Failed to delete ticket";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting ticket: {ex.Message}");
+            errorMessage = $"Error deleting ticket: {ex.Message}";
+        }
+    }
+
+    private async Task<bool> ConfirmDelete()
+    {
+        return await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this ticket?");
     }
 
     public class Ticket
